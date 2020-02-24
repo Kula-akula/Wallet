@@ -1,43 +1,48 @@
 package kg.wallet.dao;
 
 import kg.wallet.model.User;
+import kg.wallet.model.Wallet;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserDao {
-    public List<User> getUsers() {
-        List<User> users = new ArrayList<>();
-        String SQL = "select * from users";
+public class WalletDao {
+    static UserDao userDao=new UserDao();
+    public List<Wallet> getWallets() {
+        List<Wallet> wallets = new ArrayList<>();
+        String SQL = "select * from wallets";
         try (Connection connection = DB.connect();
              Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery(SQL)) {
             while(rs.next()) {
-                users.add(User.builder()
+                wallets.add(Wallet.builder()
                         .id(rs.getInt("ID"))
                         .name(rs.getString("NAME"))
-                        .password(rs.getString("PASSWORD"))
+                        .user(userDao.getUserById(rs.getInt("USER_ID")))
+                        .isActive(rs.getBoolean("IS_ACTIVE"))
                         .createdDate(rs.getTimestamp("CREATED_DATE"))
                         .build());
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return users;
+        return wallets;
     }
 
-    public User getUserById(int id) {
+    public Wallet getWalletById(int id) {
+
         String SQL = "select * from users where id = ?";
         try (Connection connection = DB.connect();
              PreparedStatement statement = connection.prepareStatement(SQL)){
             statement.setInt(1, id);
             try (ResultSet rs = statement.executeQuery()){
                 if (rs.next()) {
-                    return User.builder()
+                    return Wallet.builder()
                             .id(rs.getInt("ID"))
                             .name(rs.getString("NAME"))
-                            .password(rs.getString("PASSWORD"))
+                            .user(userDao.getUserById(rs.getInt("USER_ID")))
+                            .isActive(rs.getBoolean("IS_ACTIVE"))
                             .createdDate(rs.getTimestamp("CREATED_DATE"))
                             .build();
                 }
@@ -48,37 +53,31 @@ public class UserDao {
         return null;
     }
 
-    public User updateUser(User user) {
-        String SQL = "update users set name = ?, password = ? where id = ?";
+    public Wallet updateWallet(Wallet wallet) {
+        String SQL = "update wallets set name = ?, user_id = ?, is_active=? where id = ?";
         try (Connection connection = DB.connect();
              PreparedStatement statement = connection.prepareStatement(SQL)){
-            statement.setString(1, user.getName());
-            statement.setString(2, user.getPassword());
-            statement.setInt(3, user.getId());
+            statement.setString(1, wallet.getName());
+            statement.setInt(2, wallet.getUserId());
+            statement.setBoolean(3,wallet.isActive());
+            statement.setInt(4, wallet.getId());
             statement.executeUpdate();
-            return user;
+            return wallet;
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public User createUser(User user) {
-        String SQL = "insert into users (name, password,created_date) values (?,?,now())";
+    public Wallet createWallet(Wallet wallet) {
+        String SQL = "insert into wallets (name, user_id, is_active, created_date) values (?,?,?,now())";
         try (Connection connection = DB.connect();
              PreparedStatement statement = connection.prepareStatement(SQL)){
-            statement.setString(1, user.getName());
-            statement.setString(2, user.getPassword());
-            int affectedRows=statement.executeUpdate();
-            if (affectedRows==1){
-                try(ResultSet rs=statement.getGeneratedKeys()){
-                    if (rs.next()){
-                        System.out.println(rs.getInt(1));
-                    }
-                }
-            }
+            statement.setString(1, wallet.getName());
+            statement.setInt(2, wallet.getUserId());
+            statement.setBoolean(3, wallet.isActive());
             statement.executeUpdate();
-            return user;//TODO how to get inserted id
+            return wallet;//TODO how to get inserted id
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -86,7 +85,7 @@ public class UserDao {
     }
 
     public boolean deleteById(int id) {
-        String SQL = "delete from users where id=?";
+        String SQL = "delete from wallets where id=?";
         try (Connection connection = DB.connect();
              PreparedStatement statement = connection.prepareStatement(SQL)){
             statement.setInt(1, id);
